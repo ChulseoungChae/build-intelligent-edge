@@ -39,4 +39,4 @@ $ docker-compose up -d
 
 - 도커 컨테이너가 제대로 실행되어 돌아가면, 브라우저를 열어서 http://localhost:9000 으로 접속을 시도
 - 요청은 http://localhost:9001로 redirect 되며, 아래와 같은 admin 페이지 로그인 창이 뜸
-  - [login](./image/image-1693890781426.png)
+  - ![login](./image/image-1693890781426.png)
