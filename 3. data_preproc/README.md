@@ -7,6 +7,14 @@
 ├── README.md
 ├── minio_module/
 │   └── MinioData.py # Minio 관련 모듈 정의  
+├── extract_field
+│   ├── extract_field.ini
+│   ├── extract_field.py
+│   └── extract_field.sh
+└── split_by_id
+    ├── split_by_id.ini
+    ├── split_by_id.py
+    └── split_by_id.sh
 ```
 
 ## 📌 extract_field
