@@ -29,7 +29,7 @@ def main():
     src_path = sys.argv[6]
     upload_path = sys.argv[7]
     tags = sys.argv[8]
-    field = sys.argv[9]
+    chunk_size = sys.argv[9]
         
     # s3 client 선언
     s3_client = MinioData(bucket_name)
@@ -50,27 +50,33 @@ def main():
     print("\nCSV 파일 리스트")
     print(csv_list)
     
-    field_list = list(field.split('|'))
-    try:
-        field_list = [int(x) for x in field_list]
-    except:
-        None
-        
-    
     cnt = 1
     t_len = len(csv_list)
     df_list = []
-    print("\n필드 추출 시작")
+    print("\n분리 시작")
     for csv_file in csv_list:
         printProgressBar(cnt, t_len)
         df = s3_client.csv_to_df(csv_file)
-        df = df[field_list]
-        subpath = csv_file.split(src_path + '/')[-1]
-        subpath = upload_path + '/' + subpath
-        s3_client.df_upload(df, subpath)
+        df_len = len(df)
+        
+        base_name = csv_file.rsplit('.', 1)[0]
+        base_name = base_name.split(src_path + '/')[-1]
+        base_name = upload_path + '/' + base_name
+        extension = csv_file.split('.')[-1]
+        
+        # 데이터를 chunk_size에 따라 분할
+        num_chunks = (len(df) // chunk_size) + (1 if len(df) % chunk_size != 0 else 0)
+        
+        for i in range(num_chunks):
+            # 각 조각별 DataFrame 추출
+            df_chunk = df.iloc[i*chunk_size:(i+1)*chunk_size]
+            
+            # 파일명 생성 및 CSV로 저장
+            chunk_file_name = f"{base_name}_{i+1}.{extension}"
+            s3_client.df_upload(df_chunk, subpath)
         cnt += 1
 
-    print("\n지정된 필드가 추출된 파일 업로드 경로 : " % upload_path)
+    print("\n분리된 파일 업로드 경로 : " % upload_path)
     
     
 if __name__ == "__main__":

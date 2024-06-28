@@ -45,7 +45,6 @@ def main():
         tags = None
         #tags = [{'Key': 'Type', 'Value': 'origin'}]
     
-    file_listfile_list
     csv_list = s3_client.file_list(src_path)
     
     print("\nCSV 파일 리스트")

@@ -50,6 +50,23 @@
 # field : 분류 기준이 될 필드명
 ```
 
+## 📌 slice_csv
+- Minio에 저장된 CSV파일을 읽어와서 사용자가 지정한 line수만큼 CSV 분리.
+- 분리된 CSV를 다시 사용자가 지정한 Minio 경로에 저장.
+### 입력인자
+```python
+# service_name: 서비스 이름 (ex.'s3','ec2')
+# endpoint_url: 서버 정보
+# aws_access_key_id: minio-web에서 생성한 접속 access-id
+# aws_secret_access_key: minio-web에서 생성한 개인접속 access-key
+# bucket_name : minio bucket 명
+# src_path : 필드를 추출할 파일들의 minio 경로
+# upload_path : 필드가 추출된 파일들을 업로드할 minio 경로
+# tags : tags 정보
+# slice_size : 분리 기준이 될 CSV 라인수
+```
+
+
 ### 코드 사용 예시
 ```bash
 $ git clone https://github.com/ChulseoungChae/build-intelligent-edge.git
@@ -69,5 +86,12 @@ $ pip3 install -r requirements.txt
   - 디렉토리 이동 및 업로드코드 실행
     $ cd split_by_id
     $ bash split_by_id.sh
+
+● slice_csv
+  - 터미널에서 vim으로 slice_csv.ini 수정 
+    $ vim slice_csv/slice_csv.ini
+  - 디렉토리 이동 및 업로드코드 실행
+    $ cd slice_csv
+    $ bash slice_csv.sh
 
 ```
