@@ -25,8 +25,8 @@ def recursive_search_dir(_nowDir, _filelist):
 
 
 def main():
-    if len(sys.argv) < 5:
-        print('입력인자를 잘못 입력하였습니다. (총 5개)')
+    if len(sys.argv) < 9:
+        print('입력인자를 잘못 입력하였습니다. (총 8개)')
     print(sys.argv)
     service_name = sys.argv[1]
     endpoint_url = sys.argv[2]
