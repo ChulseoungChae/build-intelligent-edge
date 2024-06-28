@@ -15,6 +15,10 @@
     ├── split_by_id.ini
     ├── split_by_id.py
     └── split_by_id.sh
+└── slice_csv
+    ├── slice_csv.ini
+    ├── slice_csv.py
+    └── slice_csv.sh
 ```
 
 ## 📌 extract_field
