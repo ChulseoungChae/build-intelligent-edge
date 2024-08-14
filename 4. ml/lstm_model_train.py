@@ -110,7 +110,7 @@ if __name__ == '__main__':
     _epochs = 100
     _batch_size = 16
     _time_steps = 60
-    predict_col_num = 10  # 예측하고자 하는 컬럼의 인덱스(0부터 시작)
+    predict_col_num = 10  # 예측하고자 하는 컬럼의 인덱스(0부터 시작, 시간 필드 제외하여 카운트)
 
     file_name = ''
     time_field = ''
