@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
-# os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
@@ -42,7 +42,7 @@ def recursive_search_dir(_nowDir, _filelist, _form='csv'):
             dir_list.append(_nowDir + "/" + fname)
         elif os.path.isfile(_nowDir + "/" + fname):
             file_extension = os.path.splitext(fname)[1]
-            if file_extension == '.' + _form.lower() or file_extension == '.' + _form.upper():  # csv
+            if file_extension == '.' + _form.lower() or file_extension == '.' + _form.upper():
                 _filelist.append(_nowDir + "/" + fname)
 
     for toDir in dir_list:
@@ -127,6 +127,15 @@ if __name__ == '__main__':
     # accuracies = []
     # losses = []
 
+    # 전체 데이터 테스트를 위한 데이터셋
+    data_scaled2 = scaler.fit_transform(test_data_df)
+
+    if _dense == 1:
+        test_x, test_y = create_dataset(pd.DataFrame(data_scaled2), data_scaled2[:, predict_col_num], _time_steps)
+    else:
+        test_x, test_y = create_dataset_add_dense(pd.DataFrame(data_scaled2), data_scaled2[:, predict_col_num], _time_steps, _dense)
+
+    y_pred = model.predict(test_x)
  
     print("\n\n===============================================================================================================")
     print(f"\n인자값 정보 : dense : {_dense}, epoch : {_epochs}, batch size : {_batch_size}, sequence length : {_time_steps}")
