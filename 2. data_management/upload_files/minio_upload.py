@@ -63,13 +63,33 @@ def main():
     if upload_bucket_name in buckets:
         print(f"Bucket '{upload_bucket_name}' exists.")
         for file_path in file_list:
-            subpath = file_path.split('/')[-1]
-            subpath = upload_path + '/' + subpath
-            s3_client.upload(file_path, subpath, tags)
+            
+            # Minio에서 사용할 경로 생성
+            relative_path = os.path.relpath(file_path, src_local_path)
+            minio_path = os.path.join(upload_path, relative_path).replace("\\", "/")  # 윈도우 경로 처리
+            print(minio_path)
+
+            # Minio에 파일이 이미 있는지 확인
+            if s3_client.file_exists(minio_path):
+                # local_md5 = s3_client.calculate_md5(file_path)
+                # remote_stat = s3_client.get_file_stat(file_path)
+                # remote_md5 = remote_stat['ETag'].strip('"') if remote_stat else None
+                
+                # print(local_md5, remote_md5)
+
+                if s3_client.compare_file_size(file_path, minio_path):
+                    print(f"File '{minio_path}' is already up-to-date in the bucket. Skipping upload.")
+                else:
+                    print(f"File '{minio_path}' has changed. Uploading new version.")
+                    s3_client.upload(file_path, minio_path, tags)
+            else:
+                print(f"File '{minio_path}' does not exist in the bucket. Uploading.")
+                s3_client.upload(file_path, minio_path, tags)
+            
         print("Complete Upload file.")
     else:
         print(f"Bucket '{upload_bucket_name}' does not exist.")
-
-
+        
+        
 if __name__ == "__main__":
     main()

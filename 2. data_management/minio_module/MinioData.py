@@ -4,7 +4,8 @@ import sys
 import pandas as pd
 
 import boto3 # pip install boto3
-
+import hashlib
+from botocore.exceptions import ClientError
 
 def printProgressBar(iteration, total, prefix = 'Progress', suffix = 'Complete',\
                       decimals = 1, length = 50, fill = '█'): 
@@ -273,3 +274,59 @@ class MinioData(object):
     def callback(self, bytes_transferred, file_size):
         self.uploaded_bytes += bytes_transferred
         printProgressBar(self.uploaded_bytes,file_size)
+        
+        
+    def file_exists(self, object_name):
+        try:
+            self.s3_client.head_object(Bucket=self.bucket_name, Key=object_name)
+            return True
+        except ClientError as e:
+            if e.response['Error']['Code'] == '404':
+                return False
+            else:
+                print(f"Error occurred: {e}")
+                return False
+
+    def get_file_stat(self, object_name):
+        try:
+            response = self.s3_client.head_object(Bucket=self.bucket_name, Key=object_name)
+            return response
+        except ClientError as e:
+            print(f"Error occurred: {e}")
+            return None
+
+    def calculate_md5(self, file_path):
+        hash_md5 = hashlib.md5()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+    
+    def compare_md5(self, local_file_path, remote_file_path):
+        local_md5 = self.calculate_md5(local_file_path)
+        file_stat = self.get_file_stat(remote_file_path)
+        if file_stat is None:
+            print("Remote file does not exist.")
+            return False
+        remote_md5 = file_stat.get('ETag', '').strip('"')
+        return local_md5 == remote_md5
+    
+    def get_file_size(self, file_path):
+        file_stat = self.get_file_stat(file_path)
+        if file_stat is None:
+            print("Remote file does not exist.")
+            return None
+        return file_stat.get('ContentLength')
+
+    def compare_file_size(self, local_file_path, remote_file_path):
+        # Get local file size
+        local_file_size = os.path.getsize(local_file_path)
+        
+        # Get remote file size
+        remote_file_size = self.get_file_size(remote_file_path)
+        
+        # Compare file sizes
+        if remote_file_size is None:
+            return False
+        
+        return local_file_size == remote_file_size
