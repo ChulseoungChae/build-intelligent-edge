@@ -3,6 +3,7 @@ import pandas as pd
 import sys
 import os
 import io
+import time
 from urllib import parse
 sys.path.append("../minio_module/")
 from MinioData import MinioData
@@ -92,4 +93,10 @@ def main():
         
         
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            main()
+            time.sleep(3600)  # 10분 대기 후 다시 시도
+        except Exception as e:
+            print(f"오류 발생: {e}")
+            time.sleep(3600)  # 10분 대기 후 다시 시도
