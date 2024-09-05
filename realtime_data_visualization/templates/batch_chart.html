@@ -1,19 +1,36 @@
 {% extends "layout.html" %}
 
 {% block content %}
+<div style="display: flex; flex-wrap: wrap; align-items: flex-start; padding: 10px;">
+    <!-- 차트를 왼쪽에 배치하고 웹창 크기에 따라 조정 -->
+    <div id="chart-container" style="flex: 1 1 60%; min-width: 300px;"></div>
+    
+    <!-- 체크박스를 오른쪽에 배치하고 반응형 스타일 추가 -->
+    <div id="column-selector" style="flex: 0 1 200px; padding-left: 20px; margin-left: 20px; border-left: 1px solid #ddd;">
+        <h4 style="font-weight: bold; margin-bottom: 10px;">칼럼 선택</h4>
+    </div>
+</div>
+
+<!-- 파일 선택 버튼을 차트 밑 가운데에 배치 -->
+<div style="text-align: center; margin-top: 20px;">
+    <button id="upload-button" onclick="triggerFileInput()" style="padding: 10px 20px; font-size: 14px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; cursor: pointer;">파일 선택</button>
+</div>
+
+<!-- 숨겨진 파일 입력 필드 -->
 <input type="file" id="file-input" style="display:none" />
-<button id="upload-button" onclick="uploadFile()">파일 선택</button>
-<div id="chart-container"></div>
-<div id="column-selector"></div>
-<button onclick="resetZoom()">원래 상태로 복원</button>
 
 <script>
-    let currentLayout = null;
-    let selectedColumns = new Set();
+    let currentLayout = null; // 현재 레이아웃(줌인/줌아웃 상태)을 저장할 변수
+    let selectedColumns = new Set(); // 선택된 칼럼들을 저장할 집합
+    let chartData = null; // 차트 데이터를 저장할 변수
 
-    function uploadFile() {
-        const fileInput = document.getElementById('file-input');
-        fileInput.onchange = function() {
+    function triggerFileInput() {
+        document.getElementById('file-input').click(); // 파일 선택 창 열기
+    }
+
+    document.getElementById('file-input').addEventListener('change', function() {
+        const fileInput = this;
+        if (fileInput.files.length > 0) {
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
 
@@ -23,53 +40,83 @@
             })
             .then(response => response.json())
             .then(data => {
-                var chartData = JSON.parse(data);
-                if (selectedColumns.size > 0) {
-                    chartData.data = chartData.data.filter(trace => selectedColumns.has(trace.name));
-                } else {
-                    chartData.data.forEach(trace => selectedColumns.add(trace.name));
+                if (data.error) {
+                    console.error(data.error);
+                    return;
                 }
-                Plotly.react('chart-container', chartData.data, chartData.layout);
-                if (currentLayout) {
-                    Plotly.relayout('chart-container', { xaxis: { range: currentLayout.xaxis.range }, yaxis: { range: currentLayout.yaxis.range } });
-                } else {
-                    Plotly.relayout('chart-container', chartData.layout);
-                }
-                if (document.getElementById('column-selector').childElementCount === 0) {
-                    createColumnSelector(chartData.data.map(trace => trace.name));
-                } else {
-                    updateCheckboxStates(chartData.data.map(trace => trace.name));
-                }
-            });
-        };
+
+                chartData = data; // 차트 데이터를 저장
+                initializeColumns(chartData.data.map(trace => trace.name)); // 모든 칼럼을 선택 상태로 초기화
+                updateChart(); // 차트 업데이트 함수 호출
+            })
+            .catch(error => console.error('Error uploading file:', error));
+        }
+    });
+
+    function initializeColumns(columnNames) {
+        selectedColumns.clear(); // 이전 선택 상태 초기화
+        columnNames.forEach(name => selectedColumns.add(name)); // 모든 칼럼을 선택 상태로 추가
     }
 
-    function resetZoom() {
-        currentLayout = null;
-        loadRealtimeChart();
+    function updateChart() {
+        if (!chartData) return; // 차트 데이터가 없으면 종료
+
+        let filteredData = chartData.data;
+        if (selectedColumns.size > 0) {
+            filteredData = chartData.data.filter(trace => selectedColumns.has(trace.name));
+        }
+
+        // 줌 상태가 저장되어 있으면 레이아웃에 적용
+        if (currentLayout) {
+            chartData.layout.xaxis.range = currentLayout['xaxis.range'] || chartData.layout.xaxis.range;
+            chartData.layout.yaxis.range = currentLayout['yaxis.range'] || chartData.layout.yaxis.range;
+        }
+
+        Plotly.react('chart-container', filteredData, chartData.layout);
+
+        document.getElementById('chart-container').on('plotly_relayout', function(eventdata) {
+            currentLayout = eventdata; // 현재 레이아웃 정보 저장
+        });
+
+        if (document.getElementById('column-selector').childElementCount === 1) {
+            createColumnSelector(chartData.data.map(trace => trace.name));
+        } else {
+            updateCheckboxStates(chartData.data.map(trace => trace.name));
+        }
     }
 
     function createColumnSelector(columnNames) {
         const container = document.getElementById('column-selector');
+        container.innerHTML = ''; // 기존 체크박스 초기화
+
         columnNames.forEach(name => {
+            const wrapper = document.createElement('div');
+            wrapper.style.display = 'flex';
+            wrapper.style.alignItems = 'center';
+            wrapper.style.marginBottom = '5px'; // 각 항목 사이 간격 추가
+
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             checkbox.id = name;
-            checkbox.checked = selectedColumns.has(name);
+            checkbox.checked = true; // 초기 상태로 모든 체크박스를 선택
+            checkbox.style.marginRight = '5px'; // 체크박스 여백 추가
             checkbox.onchange = function() {
                 if (this.checked) {
                     selectedColumns.add(name);
                 } else {
                     selectedColumns.delete(name);
                 }
-                fetchRealtimeData();
+                updateChart(); // 체크박스 상태 변경 시 데이터 다시 로드
             };
+
             const label = document.createElement('label');
             label.htmlFor = name;
             label.innerText = name;
-            container.appendChild(checkbox);
-            container.appendChild(label);
-            container.appendChild(document.createElement('br'));
+            label.style.cursor = 'pointer';
+
+            wrapper.appendChild(checkbox);
+            wrapper.appendChild(label);
+            container.appendChild(wrapper);
         });
     }
 

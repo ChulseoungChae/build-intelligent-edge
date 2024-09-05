@@ -85,14 +85,17 @@ if __name__ == '__main__':
     # 소켓 생성 및 서버에 연결
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     client_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    try:
-        client_socket.connect((HOST, PORT))
-        print("\n서버에 연결 성공")
-        logging.info("서버에 연결 성공")
-    except Exception as e:
-        print(f"\n서버에 연결 실패: {e}")
-        logging.error(f"서버에 연결 실패: {e}")
-        exit()
+    
+    while True:
+        try:
+            client_socket.connect((HOST, PORT))
+            print("\n서버에 연결 성공")
+            logging.info("서버에 연결 성공")
+        except Exception as e:
+            print(f"\n서버에 연결 실패: {e}")
+            logging.error(f"서버에 연결 실패: {e}")
+            time.sleep(60)
+        
 
     while True:
         try:

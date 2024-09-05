@@ -21,7 +21,6 @@ def find_csv_files(folder_path):
     
     return csv_files
 
-
 # 실시간 차트 데이터 읽기
 def read_realtime_data(file_path):
     try:
@@ -47,27 +46,30 @@ def batch_chart():
 
 @app.route('/realtime-data', methods=['GET'])
 def get_realtime_data():
-    csv_list = find_csv_files(csv_directory)
-    latest_file = sort(key=lambda x: os.path.getmtime(os.path.join(directory, x)), reverse=True)
-    
+    latest_file = find_csv_files(csv_directory)
+    latest_file.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    latest_file = latest_file[0]
     if latest_file:
         df, numeric_columns = read_realtime_data(latest_file)
-        data = []
-        for column in numeric_columns:
-            trace = {
-                'x': df[datetime_column].astype(str).tolist(),
-                'y': df[column].tolist(),
-                'type': 'scatter',
-                'mode': 'lines',
-                'name': column
+        if df is not None:
+            data = []
+            for column in numeric_columns:
+                trace = {
+                    'x': df[datetime_column].astype(str).tolist(),
+                    'y': df[column].tolist(),
+                    'type': 'scatter',
+                    'mode': 'lines',
+                    'name': column
+                }
+                data.append(trace)
+            layout = {
+                'title': '실시간 차트',
+                'xaxis': {'rangeslider': {'visible': True}},
+                'yaxis': {'title': 'Values'},
             }
-            data.append(trace)
-        layout = {
-            'title': '실시간 차트',
-            'xaxis': {'rangeslider': {'visible': True}},
-            'yaxis': {'title': 'Values'},
-        }
-        return jsonify({'data': data, 'layout': layout})
+            return jsonify({'data': data, 'layout': layout})
+        else:
+            return jsonify({'error': 'Error reading the CSV file'})
     else:
         return jsonify({'error': 'No CSV files found'})
 
