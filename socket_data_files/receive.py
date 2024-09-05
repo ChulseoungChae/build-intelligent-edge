@@ -9,7 +9,7 @@ logging.basicConfig(filename='log.txt', level=logging.INFO,
 # 서버 설정
 HOST = '0.0.0.0'
 PORT = 5001
-
+saved_path = './shared_data_back'
 
 # 소켓 생성
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -38,8 +38,11 @@ while True:
                 break
             file_name = file_name_message.split(":", 1)[1]
         file_name = file_name.replace("\\", "/")
+        file_name = file_name.replace("./", "")
+        file_name = file_name.replace("../", "")
         print(f'파일명 {file_name}을(를) 수신함...')
         logging.info(f'파일명 {file_name}을(를) 수신함...')
+        file_name = os.path.join(saved_path, file_name)
         # 파일명 수신 확인 메시지 전송
         conn.sendall(b'READY')
         print('파일명 수신 확인 메시지 전송. 파일 내용 수신중..')

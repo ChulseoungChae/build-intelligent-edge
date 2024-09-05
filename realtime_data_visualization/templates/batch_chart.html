@@ -1,0 +1,85 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<input type="file" id="file-input" style="display:none" />
+<button id="upload-button" onclick="uploadFile()">파일 선택</button>
+<div id="chart-container"></div>
+<div id="column-selector"></div>
+<button onclick="resetZoom()">원래 상태로 복원</button>
+
+<script>
+    let currentLayout = null;
+    let selectedColumns = new Set();
+
+    function uploadFile() {
+        const fileInput = document.getElementById('file-input');
+        fileInput.onchange = function() {
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            fetch('/batch-chart', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                var chartData = JSON.parse(data);
+                if (selectedColumns.size > 0) {
+                    chartData.data = chartData.data.filter(trace => selectedColumns.has(trace.name));
+                } else {
+                    chartData.data.forEach(trace => selectedColumns.add(trace.name));
+                }
+                Plotly.react('chart-container', chartData.data, chartData.layout);
+                if (currentLayout) {
+                    Plotly.relayout('chart-container', { xaxis: { range: currentLayout.xaxis.range }, yaxis: { range: currentLayout.yaxis.range } });
+                } else {
+                    Plotly.relayout('chart-container', chartData.layout);
+                }
+                if (document.getElementById('column-selector').childElementCount === 0) {
+                    createColumnSelector(chartData.data.map(trace => trace.name));
+                } else {
+                    updateCheckboxStates(chartData.data.map(trace => trace.name));
+                }
+            });
+        };
+    }
+
+    function resetZoom() {
+        currentLayout = null;
+        loadRealtimeChart();
+    }
+
+    function createColumnSelector(columnNames) {
+        const container = document.getElementById('column-selector');
+        columnNames.forEach(name => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = name;
+            checkbox.checked = selectedColumns.has(name);
+            checkbox.onchange = function() {
+                if (this.checked) {
+                    selectedColumns.add(name);
+                } else {
+                    selectedColumns.delete(name);
+                }
+                fetchRealtimeData();
+            };
+            const label = document.createElement('label');
+            label.htmlFor = name;
+            label.innerText = name;
+            container.appendChild(checkbox);
+            container.appendChild(label);
+            container.appendChild(document.createElement('br'));
+        });
+    }
+
+    function updateCheckboxStates(columnNames) {
+        columnNames.forEach(name => {
+            const checkbox = document.getElementById(name);
+            if (checkbox) {
+                checkbox.checked = selectedColumns.has(name);
+            }
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        header h1 {
+            margin: 0;
+            padding-left: 10px;
+        }
+        nav {
+            margin-left: auto;
+            padding-right: 10px;
+        }
+        nav a {
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        nav a:hover {
+            background-color: #575757;
+            border-radius: 5px;
+        }
+        main {
+            margin-top: 60px;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>{{ title }}</h1>
+        <nav>
+            <a href="{{ url_for('realtime_chart') }}">실시간 차트</a>
+            <a href="{{ url_for('batch_chart') }}">배치파일 차트</a>
+        </nav>
+    </header>
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+</body>
+</html>
+
+
+<!--
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+    <nav>
+        <button onclick="loadRealtimeChart()">실시간 차트</button>
+        <button onclick="loadBatchChart()">배치파일 차트</button>
+    </nav>
+    <div id="chart-container"></div>
+
+    <input type="file" id="file-input" style="display:none" />
+    <button id="upload-button" onclick="uploadFile()">파일 선택</button>
+
+    <button onclick="resetZoom()">원래 상태로 복원</button> // 원상복구 버튼 추가
+
+    <div id="column-selector"></div> // 체크박스를 표시할 컨테이너 추가 
+
+    <script>
+        let currentLayout = null; // 현재 레이아웃(줌인/줌아웃 상태)을 저장할 변수
+        let selectedColumns = new Set(); // 선택된 칼럼들을 저장할 집합
+        let intervalId = null; // setInterval ID 저장
+
+        function loadRealtimeChart() {
+            // 기존 setInterval이 있으면 정지
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+            // 새로운 setInterval 시작
+            intervalId = setInterval(fetchRealtimeData, 1000); // 1초마다 자동 갱신
+        }
+
+        function fetchRealtimeData() {
+            fetch('/realtime-data')
+                .then(response => response.json())
+                .then(data => {
+                    var chartData = JSON.parse(data);
+
+                    // 선택된 칼럼 필터링
+                    if (selectedColumns.size > 0) {
+                        chartData.data = chartData.data.filter(trace => selectedColumns.has(trace.name));
+                    } else {
+                        // 초기 로딩 시 모든 칼럼 선택
+                        chartData.data.forEach(trace => selectedColumns.add(trace.name));
+                    }
+
+                    // 데이터 업데이트만 수행
+                    Plotly.react('chart-container', chartData.data, chartData.layout);
+
+                    // 업데이트 후 레이아웃 정보를 다시 저장
+                    document.getElementById('chart-container').on('plotly_relayout', function(eventdata) {
+                        currentLayout = eventdata; // 현재 레이아웃 정보 저장
+                    });
+
+                    // 체크박스 상태 업데이트
+                    updateCheckboxStates(chartData.data.map(trace => trace.name));
+                });
+        }
+
+        function resetZoom() {
+            currentLayout = null; // 줌 상태 초기화
+            loadRealtimeChart(); // 자동 갱신 재시작
+        }
+
+        function loadBatchChart() {
+            document.getElementById('file-input').click();
+        }
+
+        function uploadFile() {
+            const fileInput = document.getElementById('file-input');
+            fileInput.onchange = function() {
+                const formData = new FormData();
+                formData.append('file', fileInput.files[0]);
+
+                fetch('/batch-chart', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    var chartData = JSON.parse(data);
+
+                    if (selectedColumns.size > 0) {
+                        chartData.data = chartData.data.filter(trace => selectedColumns.has(trace.name));
+                    } else {
+                        chartData.data.forEach(trace => selectedColumns.add(trace.name));
+                    }
+
+                    Plotly.react('chart-container', chartData.data, chartData.layout);
+
+                    if (currentLayout) {
+                        Plotly.relayout('chart-container', { xaxis: { range: currentLayout.xaxis.range }, yaxis: { range: currentLayout.yaxis.range } });
+                    } else {
+                        Plotly.relayout('chart-container', chartData.layout);
+                    }
+
+                    // 체크박스 상태 업데이트
+                    updateCheckboxStates(chartData.data.map(trace => trace.name));
+                });
+            };
+        }
+
+        function createColumnSelector(columnNames) {
+            const container = document.getElementById('column-selector');
+            container.innerHTML = ''; // 기존 체크박스 초기화
+
+            columnNames.forEach(name => {
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = name;
+                checkbox.checked = selectedColumns.has(name); // 선택 상태 유지
+                checkbox.onchange = function() {
+                    if (this.checked) {
+                        selectedColumns.add(name);
+                    } else {
+                        selectedColumns.delete(name);
+                    }
+                    fetchRealtimeData(); // 선택이 변경될 때마다 차트 갱신
+                };
+
+                const label = document.createElement('label');
+                label.htmlFor = name;
+                label.innerText = name;
+
+                container.appendChild(checkbox);
+                container.appendChild(label);
+                container.appendChild(document.createElement('br'));
+            });
+        }
+
+        function updateCheckboxStates(columnNames) {
+            // 기존 체크박스 상태를 유지하고 필요한 경우에만 업데이트
+            columnNames.forEach(name => {
+                const checkbox = document.getElementById(name);
+                if (checkbox) {
+                    checkbox.checked = selectedColumns.has(name); // 기존 상태로 업데이트
+                }
+            });
+        }
+
+        // 초기화
+        loadRealtimeChart(); // 페이지 로드 시 실시간 차트 자동 갱신 시작
+    </script>
+</body>
+</html>
+-->
